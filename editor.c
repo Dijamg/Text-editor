@@ -4,64 +4,37 @@
 #include "terminal.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "buffer.h"
 
-//Append buffer for appending strings into existing buffer
-struct abuf {
-    char *b;
-    int len;
-};
 
 #define ABUF_INIT {NULL, 0}
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-void ab_append(struct abuf *ab, const char *s, int len){
-    char *new = realloc(ab->b, ab->len + len);
 
-    if(new == NULL) return;
-    memcpy(&new[ab->len], s, len);
-    ab->b = new;
-    ab->len += len;
-
-}
-
-void ab_free(struct abuf *ab){
-    free(ab->b);
-}
-
-void editor_draw_rows(struct abuf *ab){
+void editor_draw_rows(){
     for (int y = 0; y < E.screenrows; y++) {
         char buf[16];
         //store the current y as string in buf
         int len = snprintf(buf, sizeof(buf), "%3d:", y);
-        //append the string (row number) to the string buffer
-        ab_append(ab, buf, len);
+        //draw line number
+        write(STDOUT_FILENO, buf, len);
 
-        ab_append(ab, "\x1b[K", 3);
+        write(STDOUT_FILENO, "\x1b[K", 3);
 
         //Add line change
         if (y < E.screenrows - 1) {
-            ab_append(ab, "\r\n", 2);
+            write(STDERR_FILENO, "\r\n", 2);
         }
     }
 }
 
 
 void editor_refresh_screen(){
-    struct abuf ab = ABUF_INIT;
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
 
-    ab_append(&ab, "\x1b[?25l", 6);
-    ab_append(&ab, "\x1b[H", 3);
-
-    editor_draw_rows(&ab);
-
-    char buf[32];
-    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy +1, E.cx +1 );
-    ab_append(&ab, buf, strlen(buf));
-
-    ab_append(&ab, "\x1b[?25h", 6);
-
-    write(STDOUT_FILENO, ab.b, ab.len);
-    ab_free(&ab);
+    editor_draw_rows();
+    write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
 void editor_move_cursor(int key){
