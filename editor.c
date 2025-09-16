@@ -7,7 +7,6 @@
 #include "buffer.h"
 
 
-#define ABUF_INIT {NULL, 0}
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 
@@ -30,11 +29,22 @@ void editor_draw_rows(){
 
 
 void editor_refresh_screen(){
-    write(STDOUT_FILENO, "\x1b[2J", 4);
+    //Hide cursor and go top left
+    write(STDOUT_FILENO, "\x1b[?25l", 6);
     write(STDOUT_FILENO, "\x1b[H", 3);
 
+    //draw the rows
     editor_draw_rows();
-    write(STDOUT_FILENO, "\x1b[H", 3);
+
+    //Move cursor to right positions
+    char buf[32];
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy +1, E.cx +1);
+    write(STDOUT_FILENO, buf, strlen(buf));
+
+    //draw cursor
+    write(STDOUT_FILENO, "\x1b[?25h", 6);
+
+    //here i would draw the buffer content (text)
 }
 
 void editor_move_cursor(int key){
